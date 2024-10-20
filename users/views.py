@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from .models import User 
 from django.contrib.auth.hashers import make_password
 from .serializer import UserSerializer
+from django.core.exceptions import ObjectDoesNotExist
 import json
 
 # Create your views here.
@@ -45,20 +46,17 @@ def getUser(request,userId):
             'phone': user.phone
         }
         return JsonResponse(response_data)
-    except User.DoesNotExist:
-        return JsonResponse({'error': 'User not found'}, status=404)
     except Exception as e:
         print('Internal server error', str(e))
-        return JsonResponse({'error': 'Internal server error'}, status=500)
+        return JsonResponse({'error': 'User not found'}, status=404)
 
 
 @api_view(['DELETE'])
 def deleteUser(request, userId):
     try:
-        get_object_or_404(User, id=userId).delete()
+        user = get_object_or_404(User, id=userId)
+        user.delete()
         return JsonResponse({'success': 'User deleted'}, status = 200)
-    except User.DoesNotExist:
-        return JsonResponse({'error': 'User not found'}, status=404)
     except Exception as e:
         print('Internal server error', str(e))
-        return JsonResponse({'error': 'Internal server error'}, status=500)
+        return JsonResponse({'error': 'User not found'}, status=404)
