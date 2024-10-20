@@ -66,3 +66,56 @@ def createExpense(request):
     except Exception as e:
         print('Error in creating expense', str(e))
         return JsonResponse({'error': 'Internal server error'}, status=500)
+    
+
+@api_view(['GET'])
+def fetchIndividualExpense(request, userId):
+    try:
+        user = get_object_or_404(User, id=userId)
+        participants = Participant.objects.filter(user=user).exclude(expense__payer=user)
+        expenses = Expense.objects.filter(payer=user)
+        user_expenses = []
+
+        total_owed = 0
+        total_paid = 0
+
+        for participant in participants:
+            expense = participant.expense
+            total_owed += participant.amount
+            user_expenses.append({
+                'expense_id': expense.id,
+                'description': expense.description,
+                'amount': expense.amount,
+                'currency': expense.currency,
+                'date': expense.date,
+                'payer': expense.payer.name,
+                'payment_type': expense.payment_type,
+                'amount_owed': participant.amount
+            })
+
+        for expense in expenses:
+            total_paid += expense.amount 
+            user_expenses.append({
+                'expense_id': expense.id,
+                'description': expense.description,
+                'amount': expense.amount,
+                'currency': expense.currency,
+                'date': expense.date,
+                'payer': user.name,
+                'payment_type': expense.payment_type,
+                'amount_paid': expense.amount
+            })
+
+        net_owed = total_paid - total_owed
+        return JsonResponse({
+            'expenses': user_expenses,
+            'total_owed': total_owed,
+            'total_paid': total_paid,
+            'net_owed': net_owed
+        }, status=200, safe=False)
+        
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+    except Exception as e:
+        print('Error in fecthing individual expense', str(e))
+        return JsonResponse({'error': str(e)}, status=500)
