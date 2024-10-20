@@ -1,5 +1,5 @@
 from django.db import models
-from ..users.models import User
+from users.models import User
 
 class Expense(models.Model):
     description = models.CharField(max_length=255)
@@ -18,4 +18,4 @@ class Participant(models.Model):
     amount = models.FloatField()
 
     def __str__(self):
-        return f"{self.user.username} - {self.amount}"
+        return f"{self.user.name} - {self.amount}"
