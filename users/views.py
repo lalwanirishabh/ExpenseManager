@@ -11,7 +11,6 @@ import json
 # Create your views here.
 @api_view(['POST'])
 def createUser(request):
-    print('request :- ', request.body)
     try :
         data = json.loads(request.body)
         name = data.get('name')
@@ -32,7 +31,7 @@ def createUser(request):
         user = User.objects.create(name=name, email=email, phone=phone, password=hash_pass)
         return JsonResponse({'message': 'User created successfully', 'user_id': user.id}, status=201)
     except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': str(e)}, status=500)
 
 @api_view(['GET'])
 def getUser(request,userId):
