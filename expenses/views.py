@@ -119,3 +119,37 @@ def fetchIndividualExpense(request, userId):
     except Exception as e:
         print('Error in fecthing individual expense', str(e))
         return JsonResponse({'error': str(e)}, status=500)
+    
+
+@api_view(['GET'])
+def getOverallExpense(request):
+    try :
+        expenses = Expense.objects.all()
+        all_expenses =[]
+
+        for expense in expenses :
+            participants = Participant.objects.filter(expense=expense)
+            participants_info = []
+            for participant in participants:
+                participants_info.append({
+                    'user_id': participant.user.id,
+                    'username': participant.user.name,
+                    'amount': participant.amount
+                })
+            
+            all_expenses.append({
+                'expense_id': expense.id,
+                'description': expense.description,
+                'amount': expense.amount,
+                'currency': expense.currency,
+                'date': expense.date,
+                'payer': expense.payer.name,
+                'payment_type': expense.payment_type,
+                'participants': participants_info
+            })
+        return JsonResponse({'expenses': all_expenses}, status=200, safe=False)
+
+
+    except Exception as e:
+        print('Error in fecthing expenses', str(e))
+        return JsonResponse({'error': str(e)}, status=500)
