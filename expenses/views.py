@@ -1,12 +1,17 @@
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse,HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
 from users.models import User
 from .models import *
 from django.core.exceptions import ObjectDoesNotExist
 import json
+from django.urls import reverse
+import csv
 from django.db import transaction
+import requests
+
+BASE_URL = 'http://localhost:8000'
 
 @api_view(['POST'])
 def createExpense(request):
@@ -40,7 +45,7 @@ def createExpense(request):
         if paymentType == "exact" and exact_sum != total_amount: # Check whether individual sums amount to total sum
                 return JsonResponse({'error': 'Exact amounts do not sum up to the total expense amount'}, status=400)
         elif paymentType == "percentage" and percentage_sum != 100: # Check whether all percentages sum to 100
-            print('Error in fetching user ({payeeId}) : ', str(e))
+            print(f'Error in fetching user ({payeeId}) : ', str(e))
             return JsonResponse({'error': 'Percentages do not sum up to 100%'}, status=400)
 
         with transaction.atomic():
@@ -153,3 +158,76 @@ def getOverallExpense(request):
     except Exception as e:
         print('Error in fecthing expenses', str(e))
         return JsonResponse({'error': str(e)}, status=500)
+    
+
+
+@api_view(['GET'])
+def balanceSheet(request, userId=None):
+    try :
+        if userId:
+                individual_expenses_url = reverse('fetchIndividualExpenses', args=[userId])
+                individual_expenses_response = requests.get(f"{BASE_URL}{individual_expenses_url}")
+                individual_expenses_response.raise_for_status()
+                individual_expenses = individual_expenses_response.json()
+        else:
+            individual_expenses = {'expenses': []}
+
+        overall_expenses_url = reverse('getOverallExpenses')
+        overall_expenses_response = requests.get(f"{BASE_URL}{overall_expenses_url}") # Call Overall Expense
+        overall_expenses_response.raise_for_status()
+        overall_expenses = overall_expenses_response.json()
+        print(f"Overall_expenses {overall_expenses}")
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="balance_sheet.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'Type', 'Expense ID', 'Description', 'Amount', 'Currency', 'Date',
+            'Payer Name', 'Payment Type', 'Amount Owed', 'Amount Paid'
+        ])
+
+        if userId:
+            #Individual expenses
+            for expense in individual_expenses['expenses']:
+                amount_owed = expense.get('amount_owed', 0)
+                amount_paid = expense.get('amount_paid', 0)
+                writer.writerow([
+                    'Individual',
+                    expense['expense_id'],
+                    expense['description'],
+                    expense['amount'],
+                    expense['currency'],
+                    expense['date'],
+                    expense['payer'],
+                    expense['payment_type'],
+                    amount_owed,
+                    amount_paid
+                ])
+            
+            writer.writerow([
+                'Type', 'Expense ID', 'Description', 'Amount', 'Currency', 'Date',
+                'Payer Name', 'Payment Type', 'ParticipantId' ,'ParticipantName' ,'Amount' 
+            ])
+            for expense in overall_expenses['expenses']:
+                for participant in expense['participants']:
+                    writer.writerow([
+                        'Overall',
+                        expense['expense_id'],
+                        expense['description'],
+                        expense['amount'],
+                        expense['currency'],
+                        expense['date'],
+                        expense['payer'],
+                        expense['payment_type'],
+                        participant['user_id'],
+                        participant['username'],
+                        participant['amount']
+                    ])
+
+        return response
+
+    except Exception as e:
+        print('Error in generatign balance sheet', str(e))
+        return JsonResponse({'error': str(e)}, status=500)
+    

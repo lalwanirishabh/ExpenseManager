@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns=[
     path('add/', views.createExpense),
-    path('user/<int:userId>', views.fetchIndividualExpense),
-    path('', views.getOverallExpense)
+    path('user/<int:userId>', views.fetchIndividualExpense,name='fetchIndividualExpenses'),
+    path('', views.getOverallExpense,name='getOverallExpenses'),
+    path('balanceSheet/<int:userId>', views.balanceSheet,name='balanceSheet')
 ]
