@@ -47,7 +47,7 @@ def getUser(request,userId):
         }
         return JsonResponse(response_data)
     except Exception as e:
-        print('Internal server error', str(e))
+#         print('Internal server error', str(e))
         return JsonResponse({'error': 'User not found'}, status=404)
 
 
@@ -58,5 +58,5 @@ def deleteUser(request, userId):
         user.delete()
         return JsonResponse({'success': 'User deleted'}, status = 200)
     except Exception as e:
-        print('Internal server error', str(e))
+#         print('Internal server error', str(e))
         return JsonResponse({'error': 'User not found'}, status=404)
